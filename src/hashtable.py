@@ -20,7 +20,6 @@ class HashTable:
     def __init__(self, capacity):
         self.capacity = capacity  # Number of buckets in the hash table
         self.storage = [None] * capacity
-        self.count = 0
 
     def _hash(self, key):
         """
@@ -66,21 +65,48 @@ class HashTable:
         #     self.storage[index] = LinkedPair(key, value)
         #     self.count += 1
 
-        # ? from lecture
-        # Hashmod the key to find the bucket
-        index = self._hash_mod(key)
+        # # ? from lecture
+        # # Hashmod the key to find the bucket
+        # index = self._hash_mod(key)
 
-        # Check if a pair already exists in the bucket
-        pair = self.storage[index]
-        if pair is not None:
-            # If so, overwrite the key/value and throw a warning
-            if pair.key != key:
-                print("Warning: Overwriting value")
-                pair.key = key
+        # # Check if a pair already exists in the bucket
+        # pair = self.storage[index]
+        # if pair is not None:
+        #     # If so, overwrite the key/value and throw a warning
+        #     if pair.key != key:
+        #         print("Warning: Overwriting value")
+        #         pair.key = key
+        #         pair.value = value
+        # else:
+        #     # If not, Create a new LinkedPair and place it in the bucket
+        #     self.storage[index] = LinkedPair(key, value)
+
+        # * from the top...
+
+        # find the bucket
+        bucket = self._hash_mod(key)
+        pair = self.storage[bucket]
+
+        # if pair is none, store it
+        if pair is None:
+            self.storage[bucket] = LinkedPair(key, value)
+            return
+
+        # if keys match, replace value
+        if pair.key == key:
             pair.value = value
-        else:
-            # If not, Create a new LinkedPair and place it in the bucket
-            self.storage[index] = LinkedPair(key, value)
+            return
+
+        # find matching keys
+        while pair.next:
+            pair = pair.next
+            if pair.key == key:
+                pair.value = value
+                # print(f"{pair.key} - {pair.value}")
+                return
+
+        # if no key, set next
+        pair.next = LinkedPair(key, value)
 
     def remove(self, key):
         """
@@ -90,23 +116,25 @@ class HashTable:
 
         Fill this in.
         """
+        bucket = self._hash_mod(key)
+        pair = self.storage[bucket]
+
+        if pair is not None and pair.key == key:
+            # print(f"removing {key}")
+            self.storage[bucket] = None  # using the variable here fails
+        else:
+            print(f"{key} does not exist")
+
+        # # ? from lecture
         # index = self._hash_mod(key)
 
-        # if self.storage[index]:
-        #     self.storage[index] == None
+        # # Check if a pair exists in the bucket with matching keys
+        # if self.storage[index] is not None and self.storage[index].key == key:
+        #     # If so, remove that pair
+        #     self.storage[index] = None
         # else:
-        #     print("nope")
-
-        # ? from lecture
-        index = self._hash_mod(key)
-
-        # Check if a pair exists in the bucket with matching keys
-        if self.storage[index] is not None and self.storage[index].key == key:
-            # If so, remove that pair
-            self.storage[index] = None
-        else:
-            # Else print warning
-            print("Warning: Key does not exist")
+        #     # Else print warning
+        #     print("Warning: Key does not exist")
 
     def retrieve(self, key):
         """
@@ -116,6 +144,7 @@ class HashTable:
 
         Fill this in.
         """
+        # works in this file, fails test
         # index = self._hash_mod(key)
 
         # if self.storage[index]:
@@ -124,17 +153,28 @@ class HashTable:
         # else:
         #     return None
 
-        # ? from lecture
-        # Get the index from hashmod
-        index = self._hash_mod(key)
+        # # ? from lecture - fails tests
+        # # Get the index from hashmod
+        # index = self._hash_mod(key)
 
-        # Check if a pair exists in the bucket with matching keys
-        if self.storage[index] is not None and self.storage[index].key == key:
-            # If so, return the value
-            return self.storage[index].value
-        else:
-            # Else return None
-            return None
+        # # Check if a pair exists in the bucket with matching keys
+        # if self.storage[index] is not None and self.storage[index].key == key:
+        #     # If so, return the value
+        #     return self.storage[index].value
+        # else:
+        #     # Else return None
+        #     return None
+
+        # * from the top, using a loop
+        bucket = self._hash_mod(key)
+        pair = self.storage[bucket]
+
+        # find matching keys
+        while pair:
+            if pair.key == key:
+                return pair.value
+            # print(f"{pair} || {pair.next}")
+            pair = pair.next
 
     def resize(self):
         """
@@ -143,20 +183,40 @@ class HashTable:
 
         Fill this in.
         """
-        self.capacity *= 2
-        new_storage = [None] * self.capacity
-        for i in range(self.count):
-            new_storage[i] = self.storage[i]
+        # doubles cap
+        # self.capacity *= 2
+        # new_storage = [None] * self.capacity
 
-        self.storage = new_storage
+        # for i in range(self.count):
+        #     new_storage[i] = self.storage[i]
+
+        # self.storage = new_storage
+
+        current_store = self.storage
+
+        # doubles cap
+        self.capacity *= 2
+        self.storage = [None] * self.capacity
+
+        # print(f">>> current store >>> {current_store}")
+        # print(f">>> double cap >>> {self.storage}")
+
+        for pair in current_store:
+            # insert k/v's
+            while pair:
+                self.insert(pair.key, pair.value)
+                pair = pair.next
+
+        # print(f">>> at end >>> {self.storage}")
+        return self.storage
 
 
 if __name__ == "__main__":
     ht = HashTable(2)
 
     ht.insert("line_1", "Tiny hash table")
-    # ht.insert("line_2", "Filled beyond capacity")
-    # ht.insert("line_3", "Linked list saves the day!")
+    ht.insert("line_2", "Filled beyond capacity")
+    ht.insert("line_3", "Linked list saves the day!")
 
     print(f"storage --> {ht.storage}")
 
@@ -164,19 +224,19 @@ if __name__ == "__main__":
 
     # Test storing beyond capacity
     print(ht.retrieve("line_1"))
-    # print(ht.retrieve("line_2"))
-    # print(ht.retrieve("line_3"))
+    print(ht.retrieve("line_2"))
+    print(ht.retrieve("line_3"))
 
     # Test resizing
-    # old_capacity = len(ht.storage)
-    # ht.resize()
-    # new_capacity = len(ht.storage)
+    old_capacity = len(ht.storage)
+    ht.resize()
+    new_capacity = len(ht.storage)
 
-    # print(f"\nResized from {old_capacity} to {new_capacity}.\n")
+    print(f"\nResized from {old_capacity} to {new_capacity}.\n")
 
-    # # Test if data intact after resizing
-    # print(ht.retrieve("line_1"))
-    # print(ht.retrieve("line_2"))
-    # print(ht.retrieve("line_3"))
+    # Test if data intact after resizing
+    print(ht.retrieve("line_1"))
+    print(ht.retrieve("line_2"))
+    print(ht.retrieve("line_3"))
 
     print("")
